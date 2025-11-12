@@ -153,7 +153,7 @@ namespace FingerprintAttendanceSystem.Services
 
                     ResetCaptureBuffer();
                     int ret = zkfp2.AcquireFingerprint(_devHandle, _fpBuffer, _capTmp, ref _cbCapTmp);
-                    if (ret != zkfperrdef.ZKFP_ERR_OK)
+                    if (ret != zkfp.ZKFP_ERR_OK)
                     {
                         return HandleAcquisitionError(ret, "captura para enrolamiento");
                     }
@@ -198,7 +198,7 @@ namespace FingerprintAttendanceSystem.Services
                     int cbRegTmp = 0;
 
                     int ret = zkfp2.DBMerge(_dbHandle, _enrollTemplates[0], _enrollTemplates[1], _enrollTemplates[2], regTmp, ref cbRegTmp);
-                    if (ret != zkfperrdef.ZKFP_ERR_OK)
+                    if (ret != zkfp.ZKFP_ERR_OK)
                     {
                         return new FingerprintResponse { Success = false, Message = "Error al generar template" };
                     }
@@ -238,7 +238,7 @@ namespace FingerprintAttendanceSystem.Services
 
                     ResetCaptureBuffer();
                     int ret = zkfp2.AcquireFingerprint(_devHandle, _fpBuffer, _capTmp, ref _cbCapTmp);
-                    if (ret != zkfperrdef.ZKFP_ERR_OK)
+                    if (ret != zkfp.ZKFP_ERR_OK)
                     {
                         return HandleAcquisitionError(ret, "identificación");
                     }
@@ -407,12 +407,12 @@ namespace FingerprintAttendanceSystem.Services
 
             switch (errorCode)
             {
-                case zkfperrdef.ZKFP_ERR_NO_DEVICE:
-                case zkfperrdef.ZKFP_ERR_INVALID_HANDLE:
-                case zkfperrdef.ZKFP_ERR_CAPTURE:
-                case zkfperrdef.ZKFP_ERR_INIT:
-                case zkfperrdef.ZKFP_ERR_INITLIB:
-                case zkfperrdef.ZKFP_ERR_OPEN:
+                case zkfp.ZKFP_ERR_NO_DEVICE:
+                case zkfp.ZKFP_ERR_INVALID_HANDLE:
+                case zkfp.ZKFP_ERR_CAPTURE:
+                case zkfp.ZKFP_ERR_INIT:
+                case zkfp.ZKFP_ERR_INITLIB:
+                case zkfp.ZKFP_ERR_OPEN:
                     needsReinitialization = true;
                     message = "El lector se desconectó o está ocupado";
                     break;
