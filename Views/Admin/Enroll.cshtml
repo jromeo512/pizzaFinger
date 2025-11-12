@@ -1,0 +1,292 @@
+@model List<Empleado>
+
+@{
+    ViewData["Title"] = "Enrolamiento de Huellas";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-fingerprint"></i> Enrolamiento de Huellas</h2>
+        <p class="text-muted">Registre huellas digitales para los empleados</p>
+        <a href="@Url.Action("Index", "Admin")" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-users"></i> Seleccionar Empleado
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Buscar Empleado</label>
+                    <input type="text" id="searchEmpleado" class="form-control" placeholder="Buscar por nombre o código..." />
+                </div>
+                <div id="empleadoList" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var emp in Model)
+                    {
+                        <div class="card mb-2 empleado-item" data-codigo="@emp.Codigo">
+                            <div class="card-body p-2">
+                                <h6 class="mb-1">@emp.Nombre</h6>
+                                <small class="text-muted">
+                                    Código: @emp.Codigo
+                                    @if (emp.TieneHuella)
+                                    {
+                                        <span class="badge bg-success ms-2">Con huella</span>
+                                    }
+                                </small>
+                                <button class="btn btn-sm btn-primary mt-2 btnSelectEmpleado" data-codigo="@emp.Codigo" data-nombre="@emp.Nombre">
+                                    Seleccionar
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-hand-point-up"></i> Proceso de Enrolamiento
+            </div>
+            <div class="card-body text-center">
+                <div id="noSelectionState">
+                    <i class="fas fa-user-plus fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">Seleccione un empleado para comenzar</p>
+                </div>
+
+                <div id="enrollmentState" style="display: none;">
+                    <h4 id="selectedEmpleadoName"></h4>
+                    <p class="text-muted">Código: <span id="selectedEmpleadoCodigo"></span></p>
+
+                    <div id="captureInstructions" class="alert alert-info">
+                        <strong>Instrucciones:</strong>
+                        <ol class="text-start">
+                            <li>Asegúrese de que el lector está inicializado</li>
+                            <li>Coloque el dedo 3 veces en el lector</li>
+                            <li>Mantenga el dedo firme en cada captura</li>
+                            <li>Espere la confirmación entre capturas</li>
+                        </ol>
+                    </div>
+
+                    <div class="mb-3">
+                        <button id="btnInitDevice" class="btn btn-secondary">
+                            <i class="fas fa-power-off"></i> Inicializar Lector
+                        </button>
+                    </div>
+
+                    <div id="captureProgress">
+                        <div class="mb-3">
+                            <div class="progress" style="height: 30px;">
+                                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%">
+                                    0/3 capturas
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <div id="capture1" class="capture-box border p-3">
+                                    <i class="fas fa-fingerprint fa-3x text-muted"></i>
+                                    <p class="mt-2">Captura 1</p>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div id="capture2" class="capture-box border p-3">
+                                    <i class="fas fa-fingerprint fa-3x text-muted"></i>
+                                    <p class="mt-2">Captura 2</p>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div id="capture3" class="capture-box border p-3">
+                                    <i class="fas fa-fingerprint fa-3x text-muted"></i>
+                                    <p class="mt-2">Captura 3</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="btnCapture" class="btn btn-success btn-lg" disabled>
+                            <i class="fas fa-hand-pointer"></i> Capturar Huella
+                        </button>
+
+                        <button id="btnSaveEnrollment" class="btn btn-primary btn-lg ms-2" style="display: none;">
+                            <i class="fas fa-save"></i> Guardar Huella
+                        </button>
+
+                        <button id="btnCancelEnrollment" class="btn btn-danger btn-lg ms-2">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let captureCount = 0;
+        let selectedCodigo = '';
+        let deviceReady = false;
+
+        $(document).ready(function () {
+            // Búsqueda de empleados
+            $('#searchEmpleado').on('keyup', function () {
+                let value = $(this).val().toLowerCase();
+                $('.empleado-item').filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
+            // Seleccionar empleado
+            $('.btnSelectEmpleado').click(function () {
+                selectedCodigo = $(this).data('codigo');
+                let nombre = $(this).data('nombre');
+                
+                $('#selectedEmpleadoName').text(nombre);
+                $('#selectedEmpleadoCodigo').text(selectedCodigo);
+                $('#noSelectionState').hide();
+                $('#enrollmentState').show();
+                
+                resetCaptures();
+            });
+
+            // Inicializar dispositivo
+            $('#btnInitDevice').click(function () {
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Inicializando...');
+
+                $.post('/Admin/InitDevice', function (result) {
+                    if (result.success) {
+                        deviceReady = true;
+                        $('#btnCapture').prop('disabled', false);
+                        alert('Dispositivo inicializado correctamente');
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                }).fail(function () {
+                    alert('Error de conexión');
+                }).always(function () {
+                    btn.prop('disabled', false).html('<i class="fas fa-power-off"></i> Inicializar Lector');
+                });
+            });
+
+            // Capturar huella
+            $('#btnCapture').click(function () {
+                if (!deviceReady) {
+                    alert('Por favor inicialice el dispositivo primero');
+                    return;
+                }
+
+                if (captureCount >= 3) {
+                    alert('Ya se completaron las 3 capturas');
+                    return;
+                }
+
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Capturando...');
+
+                $.ajax({
+                    url: '/Admin/CaptureFingerprint',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(captureCount + 1),
+                    success: function (result) {
+                        if (result.success) {
+                            captureCount++;
+                            updateCaptureUI(captureCount, result.imageBase64);
+                            
+                            if (captureCount >= 3) {
+                                generateTemplate();
+                            }
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Error de conexión');
+                    },
+                    complete: function () {
+                        btn.prop('disabled', false).html('<i class="fas fa-hand-pointer"></i> Capturar Huella');
+                    }
+                });
+            });
+
+            // Guardar enrolamiento
+            $('#btnSaveEnrollment').click(function () {
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+                $.ajax({
+                    url: '/Admin/SaveFingerprint',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Codigo: selectedCodigo }),
+                    success: function (result) {
+                        if (result.success) {
+                            alert('✓ Huella guardada exitosamente');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Error de conexión');
+                    },
+                    complete: function () {
+                        btn.prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Huella');
+                    }
+                });
+            });
+
+            // Cancelar enrolamiento
+            $('#btnCancelEnrollment').click(function () {
+                if (confirm('¿Desea cancelar el enrolamiento?')) {
+                    resetCaptures();
+                    $('#enrollmentState').hide();
+                    $('#noSelectionState').show();
+                }
+            });
+
+            function updateCaptureUI(num, imageBase64) {
+                let captureBox = $('#capture' + num);
+                captureBox.html(`
+                    <img src="data:image/bmp;base64,${imageBase64}" class="img-fluid" style="max-height: 100px;" />
+                    <p class="mt-2 text-success"><i class="fas fa-check"></i> Captura ${num}</p>
+                `);
+
+                let percent = (num / 3) * 100;
+                $('#progressBar').css('width', percent + '%').text(num + '/3 capturas');
+            }
+
+            function generateTemplate() {
+                $.post('/Admin/GenerateTemplate', function (result) {
+                    if (result.success) {
+                        $('#btnSaveEnrollment').show();
+                        $('#btnCapture').hide();
+                        alert('✓ Template generado. Ahora puede guardar la huella.');
+                    } else {
+                        alert('Error al generar template: ' + result.message);
+                        resetCaptures();
+                    }
+                });
+            }
+
+            function resetCaptures() {
+                captureCount = 0;
+                $('#progressBar').css('width', '0%').text('0/3 capturas');
+                $('#capture1, #capture2, #capture3').html(`
+                    <i class="fas fa-fingerprint fa-3x text-muted"></i>
+                    <p class="mt-2">Captura</p>
+                `);
+                $('#btnSaveEnrollment').hide();
+                $('#btnCapture').show().prop('disabled', !deviceReady);
+            }
+        });
+    </script>
+}

@@ -1,0 +1,119 @@
+@model List<Empleado>
+
+@{
+    ViewData["Title"] = "Gestión de Empleados";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-users"></i> Gestión de Empleados</h2>
+        <p class="text-muted">Lista de empleados registrados en el sistema</p>
+        <a href="@Url.Action("Index", "Admin")" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+        <button id="btnSyncEmpleados" class="btn btn-primary">
+            <i class="fas fa-sync"></i> Sincronizar con AppSheet
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-list"></i> Lista de Empleados
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" id="searchBox" class="form-control" placeholder="Buscar por nombre, código o puesto..." />
+                </div>
+
+                @if (Model != null && Model.Any())
+                {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th>Puesto</th>
+                                        <th>Sucursal</th>
+                                        <th>Fecha Ingreso</th>
+                                        <th>Estado Huella</th>
+                                        <th>Última Sync</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeTable">
+                                @foreach (var empleado in Model)
+                                {
+                                            <tr>
+                                                <td><strong>@empleado.Codigo</strong></td>
+                                                <td>@empleado.Nombre</td>
+                                                <td>@empleado.Puesto</td>
+                                                <td>@empleado.SucursalId</td>
+                                                <td>@(empleado.FechaIngreso?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                                <td>
+                                            @if (empleado.TieneHuella)
+                                            {
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check"></i> Enrolada
+                                                            </span>
+                                            }
+                                            else
+                                            {
+                                                            <span class="badge bg-warning">
+                                                                <i class="fas fa-times"></i> Sin Huella
+                                                            </span>
+                                            }
+                                                </td>
+                                                <td>@empleado.LastSync.ToString("dd/MM/yyyy HH:mm")</td>
+                                            </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                }
+                else
+                {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No hay empleados registrados. 
+                            Sincronice con AppSheet para cargar empleados.
+                        </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+        <script>
+            $(document).ready(function () {
+                // Búsqueda en tabla
+                $('#searchBox').on('keyup', function () {
+                    var value = $(this).val().toLowerCase();
+                    $('#employeeTable tr').filter(function () {
+                        $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                    });
+                });
+
+                // Sincronizar empleados
+                $('#btnSyncEmpleados').click(function () {
+                    var btn = $(this);
+                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sincronizando...');
+
+                    $.post('@Url.Action("SyncEmployees", "Admin")', function (result) {
+                        if (result.success) {
+                            alert('✓ Empleados sincronizados exitosamente');
+                            location.reload();
+                        } else {
+                            alert('✗ Error: ' + result.message);
+                        }
+                    }).fail(function () {
+                        alert('✗ Error de conexión');
+                    }).always(function () {
+                        btn.prop('disabled', false).html('<i class="fas fa-sync"></i> Sincronizar con AppSheet');
+                    });
+                });
+            });
+        </script>
+}

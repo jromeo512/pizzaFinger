@@ -1,0 +1,166 @@
+@{
+    ViewData["Title"] = "Panel de Administración";
+    var stats = ViewBag.Stats;
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> Panel de Administración</h2>
+        <p class="text-muted">Gestione empleados, huellas y asistencias</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x text-primary mb-2"></i>
+                <h3 class="mt-2">@stats.TotalEmpleados</h3>
+                <p class="text-muted">Total Empleados</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <i class="fas fa-fingerprint fa-3x text-success mb-2"></i>
+                <h3 class="mt-2">@stats.EmpleadosConHuella</h3>
+                <p class="text-muted">Con Huella</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <i class="fas fa-calendar-check fa-3x text-info mb-2"></i>
+                <h3 class="mt-2">@stats.AsistenciasHoy</h3>
+                <p class="text-muted">Asistencias Hoy</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center card-hover">
+            <div class="card-body">
+                <i class="fas fa-sync-alt fa-3x text-warning mb-2"></i>
+                <h3 class="mt-2">@stats.PendientesSincronizar</h3>
+                <p class="text-muted">Pendientes Sync</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-fingerprint"></i> Enrolamiento de Huellas
+            </div>
+            <div class="card-body">
+                <p>Registre huellas digitales para nuevos empleados o actualice las existentes.</p>
+                <a href="@Url.Action("Enroll", "Admin")" class="btn btn-primary">
+                    <i class="fas fa-hand-point-up"></i> Enrolar Huellas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-users"></i> Gestión de Empleados
+            </div>
+            <div class="card-body">
+                <p>Administre la información de los empleados y sincronice con AppSheet.</p>
+                <a href="@Url.Action("Employees", "Admin")" class="btn btn-success me-2">
+                    <i class="fas fa-list"></i> Ver Empleados
+                </a>
+                <button id="btnSyncEmpleados" class="btn btn-outline-success">
+                    <i class="fas fa-sync"></i> Sincronizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </div>
+            <div class="card-body">
+                <p>Consulte reportes de asistencia y estadísticas.</p>
+                <a href="@Url.Action("Reports", "Admin")" class="btn btn-info">
+                    <i class="fas fa-file-alt"></i> Ver Reportes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-cloud-upload-alt"></i> Sincronización
+            </div>
+            <div class="card-body">
+                <p>Sincronice las asistencias pendientes con AppSheet.</p>
+                <button id="btnSyncAsistencias" class="btn btn-warning">
+                    <i class="fas fa-sync-alt"></i> Sincronizar Asistencias
+                </button>
+                <div id="syncResult" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#btnSyncEmpleados').click(function () {
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sincronizando...');
+
+                $.post('/Admin/SyncEmployees', function (result) {
+                    if (result.success) {
+                        alert('Empleados sincronizados exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                }).fail(function () {
+                    alert('Error de conexión');
+                }).always(function () {
+                    btn.prop('disabled', false).html('<i class="fas fa-sync"></i> Sincronizar');
+                });
+            });
+
+            $('#btnSyncAsistencias').click(function () {
+                let btn = $(this);
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sincronizando...');
+
+                $.post('/Admin/SyncAttendances', function (result) {
+                    if (result.success) {
+                        $('#syncResult').html(`
+                            <div class="alert alert-success">
+                                ✓ Se sincronizaron ${result.count} asistencias
+                            </div>
+                        `);
+                        setTimeout(function () { location.reload(); }, 2000);
+                    } else {
+                        $('#syncResult').html(`
+                            <div class="alert alert-danger">
+                                ✗ Error: ${result.message}
+                            </div>
+                        `);
+                    }
+                }).fail(function () {
+                    $('#syncResult').html(`
+                        <div class="alert alert-danger">
+                            ✗ Error de conexión
+                        </div>
+                    `);
+                }).always(function () {
+                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Sincronizar Asistencias');
+                });
+            });
+        });
+    </script>
+}

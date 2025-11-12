@@ -1,0 +1,111 @@
+@model List<Asistencia>
+
+@{
+    ViewData["Title"] = "Reportes de Asistencia";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-bar"></i> Reportes de Asistencia</h2>
+        <p class="text-muted">Registro de asistencias del día</p>
+        <a href="@Url.Action("Index", "Admin")" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-calendar-day"></i> Asistencias de Hoy - @DateTime.Today.ToString("dd/MM/yyyy")
+            </div>
+            <div class="card-body">
+                @if (Model != null && Model.Any())
+                {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th>Puesto</th>
+                                        <th>Hora Entrada</th>
+                                        <th>Hora Salida</th>
+                                        <th>Tiempo Extra</th>
+                                        <th>Estado Sync</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var asistencia in Model)
+                                {
+                                            <tr>
+                                                <td><strong>@asistencia.Codigo</strong></td>
+                                                <td>@asistencia.Nombre</td>
+                                                <td>@asistencia.Puesto</td>
+                                                <td>
+                                            @if (asistencia.HoraEntrada.HasValue)
+                                            {
+                                                            <span class="badge bg-success">
+                                                    @asistencia.HoraEntrada.Value.ToString("HH:mm:ss")
+                                                            </span>
+                                            }
+                                            else
+                                            {
+                                                            <span class="text-muted">-</span>
+                                            }
+                                                </td>
+                                                <td>
+                                            @if (asistencia.Salida.HasValue)
+                                            {
+                                                            <span class="badge bg-info">
+                                                    @asistencia.Salida.Value.ToString("HH:mm:ss")
+                                                            </span>
+                                            }
+                                            else
+                                            {
+                                                            <span class="text-warning">Pendiente</span>
+                                            }
+                                                </td>
+                                                <td>
+                                            @if (asistencia.TiempoExtra.HasValue && asistencia.TiempoExtra > 0)
+                                            {
+                                                            <span class="badge bg-warning text-dark">
+                                                    @asistencia.TiempoExtra.Value.ToString("F2") hrs
+                                                            </span>
+                                            }
+                                            else
+                                            {
+                                                            <span class="text-muted">-</span>
+                                            }
+                                                </td>
+                                                <td>
+                                            @if (asistencia.Sincronizado)
+                                            {
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check"></i> Sincronizado
+                                                            </span>
+                                            }
+                                            else
+                                            {
+                                                            <span class="badge bg-warning">
+                                                                <i class="fas fa-clock"></i> Pendiente
+                                                            </span>
+                                            }
+                                                </td>
+                                            </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                }
+                else
+                {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No hay asistencias registradas para hoy.
+                        </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
